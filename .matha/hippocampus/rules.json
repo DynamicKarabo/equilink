@@ -1,0 +1,9 @@
+{
+  "rules": [
+    "Idempotency guarantees: Order idempotency keys must be caller-generated and deduplication must be enforced atomically via Redis SET NX with a 24-hour TTL",
+    "State transition rules: No code may mutate an order's state directly; all lifecycle transitions must be governed by an explicit finite state machine and fire persisted domain events",
+    "enant isolation: Data isolation must be enforced automatically at the Fund level using Entity Framework Core global query filters on the fund_id claim, with no cross-tenant queries allowed without explicit override",
+    "isk engine sequencing: Pre-trade risk rules must evaluate limits exclusively against Redis-cached state, never reading synchronously from PostgreSQL on the hot execution path. Append-only ledger: The order event store must be strictly append-only, with UPDATE and DELETE operations physically blocked by database-level REVOKE privileges",
+    "Immutability and compliance: Correcting genuine data errors requires appending a compensating event, as direct mutation of audit records is strictly prohibited."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "matha": {
+      "command": "node",
+      "args": [
+        "/home/karabooliphant/Projects/equilink/dist/index.js",
+        "serve"
+      ],
+      "description": "MATHA persistent cognitive layer"
+    }
+  }
+}
