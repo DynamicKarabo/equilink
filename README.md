@@ -547,8 +547,8 @@ graph LR
     G -->|No| E
     G -->|Yes| H[Execute Handler]
 
-    C -.-> Redis1[(Redis risk:{fundId}:blacklist)]
-    F -.-> Redis2[(Redis risk:{fundId}:max_order_size)]
+    C -.-> Redis1[(Redis risk fundId blacklist)]
+    F -.-> Redis2[(Redis risk fundId max_order_size)]
 
     style C fill:#e8f5e9
     style F fill:#e8f5e9
