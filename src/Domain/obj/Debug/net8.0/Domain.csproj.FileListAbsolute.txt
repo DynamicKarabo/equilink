@@ -1,0 +1,13 @@
+/home/karabooliphant/Projects/equilink/src/Domain/bin/Debug/net8.0/Domain.deps.json
+/home/karabooliphant/Projects/equilink/src/Domain/bin/Debug/net8.0/Domain.dll
+/home/karabooliphant/Projects/equilink/src/Domain/bin/Debug/net8.0/Domain.pdb
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.GeneratedMSBuildEditorConfig.editorconfig
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.AssemblyInfoInputs.cache
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.AssemblyInfo.cs
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.csproj.CoreCompileInputs.cache
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.sourcelink.json
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.dll
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/refint/Domain.dll
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.pdb
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/ref/Domain.dll
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.csproj.AssemblyReference.cache

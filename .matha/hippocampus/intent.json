@@ -1,3 +1,0 @@
-{
-  "why": "EquiLink was designed to solve a critical structural flaw in modern algorithmic trading systems: the strategy layer (alpha generation) and the live exchange layer are often connected by \"fragile, bespoke glue code\""
-}

@@ -1,8 +1,0 @@
-{
-  "boundaries": [
-    "Alpha strategy development or trade generation",
-    "Portfolio management or tax lot accounting. Exchange matching engine operations",
-    "Financial reporting, accounting, or regulatory reporting (e.g., MIFID II / ASIC)",
-    "lient-facing order management UIs, trade portals, or mobile applications. Native FIX protocol engine implementation. Settlement or T+2 processing"
-  ]
-}

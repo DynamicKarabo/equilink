@@ -1,0 +1,12 @@
+/home/karabooliphant/Projects/equilink/src/Shared/bin/Debug/net8.0/Shared.deps.json
+/home/karabooliphant/Projects/equilink/src/Shared/bin/Debug/net8.0/Shared.dll
+/home/karabooliphant/Projects/equilink/src/Shared/bin/Debug/net8.0/Shared.pdb
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/Shared.GeneratedMSBuildEditorConfig.editorconfig
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/Shared.AssemblyInfoInputs.cache
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/Shared.AssemblyInfo.cs
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/Shared.csproj.CoreCompileInputs.cache
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/Shared.sourcelink.json
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/Shared.dll
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/refint/Shared.dll
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/Shared.pdb
+/home/karabooliphant/Projects/equilink/src/Shared/obj/Debug/net8.0/ref/Shared.dll
