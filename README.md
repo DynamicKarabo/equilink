@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis 7" />
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose" />
   <img src="https://img.shields.io/badge/CQRS-Architecture-2D8CFF?style=for-the-badge&logo=architect&logoColor=white" alt="CQRS" />
-  <img src="https://img.shields.io/badge/Event-Sourcing-Enabled-0052CC?style=for-the-badge&logo=apache-kafka&logoColor=white" alt="Event Sourcing" />
+  <img src="https://img.shields.io/badge/Event-Sourcing-Enabled-0052CC?style=for-the-badge&logoColor=white" alt="Event Sourcing" />
 </p>
 
 <h1 align="center">EquiLink</h1>
