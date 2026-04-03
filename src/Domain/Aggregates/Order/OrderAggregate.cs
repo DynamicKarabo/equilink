@@ -1,4 +1,5 @@
 using Stateless;
+using EquiLink.Shared.AssetClasses;
 using EquiLink.Domain.Aggregates.Order.Events;
 using EquiLink.Domain.Events;
 
@@ -35,6 +36,7 @@ public class OrderAggregate
     public string Side { get; private set; } = string.Empty;
     public decimal Quantity { get; private set; }
     public decimal? LimitPrice { get; private set; }
+    public AssetClass AssetClass { get; private set; }
     public int Version => _eventStream.Count;
 
     public OrderState CurrentState => _currentState;
@@ -51,7 +53,7 @@ public class OrderAggregate
         ConfigureStateMachine();
     }
 
-    public static OrderAggregate Create(Guid fundId, string symbol, string side, decimal quantity, decimal? limitPrice)
+    public static OrderAggregate Create(Guid fundId, string symbol, string side, decimal quantity, decimal? limitPrice, AssetClass assetClass)
     {
         var aggregate = new OrderAggregate();
         aggregate.Id = Guid.NewGuid();
@@ -66,7 +68,8 @@ public class OrderAggregate
             Symbol: symbol,
             Side: side,
             Quantity: quantity,
-            LimitPrice: limitPrice
+            LimitPrice: limitPrice,
+            AssetClass: assetClass.ToString()
         );
 
         aggregate.ApplyEvent(@event);
@@ -155,6 +158,24 @@ public class OrderAggregate
         _uncommittedEvents.Add(@event);
     }
 
+    public void Correct(string originalField, string originalValue, string correctedValue, string reason)
+    {
+        var @event = new OrderCorrectedEvent(
+            EventId: Guid.NewGuid(),
+            AggregateId: Id,
+            OccurredAt: DateTimeOffset.UtcNow,
+            EventType: nameof(OrderCorrectedEvent),
+            Version: Version + 1,
+            OriginalField: originalField,
+            OriginalValue: originalValue,
+            CorrectedValue: correctedValue,
+            Reason: reason
+        );
+
+        ApplyCorrection(@event);
+        _uncommittedEvents.Add(@event);
+    }
+
     public IReadOnlyList<IDomainEvent> DequeueUncommittedEvents()
     {
         var events = _uncommittedEvents.ToList();
@@ -172,6 +193,7 @@ public class OrderAggregate
                 Side = e.Side;
                 Quantity = e.Quantity;
                 LimitPrice = e.LimitPrice;
+                AssetClass = Enum.Parse<AssetClass>(e.AssetClass);
                 _currentState = OrderState.New;
                 break;
 
@@ -190,9 +212,32 @@ public class OrderAggregate
             case OrderSubmittedEvent:
                 _currentState = OrderState.Submitted;
                 break;
+
+            case OrderCorrectedEvent e:
+                ApplyCorrection(e);
+                break;
         }
 
         _eventStream.Add(@event);
+    }
+
+    private void ApplyCorrection(OrderCorrectedEvent e)
+    {
+        switch (e.OriginalField.ToLowerInvariant())
+        {
+            case "quantity":
+                Quantity = decimal.Parse(e.CorrectedValue);
+                break;
+            case "limitprice":
+                LimitPrice = string.IsNullOrEmpty(e.CorrectedValue) ? null : decimal.Parse(e.CorrectedValue);
+                break;
+            case "symbol":
+                Symbol = e.CorrectedValue;
+                break;
+            case "side":
+                Side = e.CorrectedValue;
+                break;
+        }
     }
 
     private void ConfigureStateMachine()

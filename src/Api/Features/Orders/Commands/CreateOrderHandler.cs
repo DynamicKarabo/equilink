@@ -16,7 +16,8 @@ public class CreateOrderHandler(IEventStore eventStore)
             request.Symbol,
             request.Side,
             request.Quantity,
-            request.LimitPrice);
+            request.LimitPrice,
+            request.AssetClass);
 
         var events = order.DequeueUncommittedEvents();
 

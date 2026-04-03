@@ -1,3 +1,4 @@
+using EquiLink.Shared.AssetClasses;
 using EquiLink.Shared.Idempotency;
 using EquiLink.Shared.Risk;
 using MediatR;
@@ -11,6 +12,7 @@ public record CreateOrderCommand(
     string Side,
     decimal Quantity,
     decimal? LimitPrice,
+    AssetClass AssetClass,
     string IdempotencyKey
 ) : IRequest<CreateOrderResult>, IOrderRequest;
 

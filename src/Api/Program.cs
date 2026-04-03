@@ -3,6 +3,9 @@ using EquiLink.Api.Endpoints;
 using EquiLink.Domain.EventStore;
 using EquiLink.Infrastructure.Behaviors;
 using EquiLink.Infrastructure.Persistence;
+using EquiLink.Infrastructure.Compliance;
+using EquiLink.Infrastructure.Compliance.Export;
+using EquiLink.Infrastructure.DataTier;
 using EquiLink.Infrastructure.Persistence.EventStore;
 using EquiLink.Infrastructure.ReadRepositories;
 using EquiLink.Infrastructure.RiskEngine;
@@ -26,13 +29,20 @@ builder.Services.AddScoped<ICurrentFundContext, CurrentFundContext>();
 var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres")
     ?? "Host=localhost;Port=5432;Database=equilink;Username=postgres;Password=postgres";
 
+builder.Services.AddSingleton<IConnectionStringProvider, ConnectionStringProvider>();
+
 builder.Services.AddDbContext<EquiLinkDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));
 
 builder.Services.AddScoped<IEventStore, EventStore>();
 
-builder.Services.AddScoped<IOrderReadRepository>(sp =>
-    new OrderReadRepository(postgresConnectionString));
+builder.Services.AddScoped<IOrderReadRepository, OrderReadRepository>();
+
+builder.Services.AddSingleton<ICsvExportService, CsvExportService>();
+builder.Services.AddSingleton<IPdfExportService, PdfExportService>();
+builder.Services.AddScoped<IComplianceAuditService, ComplianceAuditService>();
+builder.Services.AddSingleton<IWormArchivalService>(sp =>
+    new WormArchivalService(sp.GetRequiredService<IConnectionStringProvider>(), builder.Configuration["AzureBlob:ConnectionString"] ?? "", sp.GetRequiredService<ILogger<WormArchivalService>>()));
 
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnectionString));

@@ -11,3 +11,6 @@
 /home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.pdb
 /home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/ref/Domain.dll
 /home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.csproj.AssemblyReference.cache
+/home/karabooliphant/Projects/equilink/src/Domain/bin/Debug/net8.0/Shared.dll
+/home/karabooliphant/Projects/equilink/src/Domain/bin/Debug/net8.0/Shared.pdb
+/home/karabooliphant/Projects/equilink/src/Domain/obj/Debug/net8.0/Domain.csproj.Up2Date

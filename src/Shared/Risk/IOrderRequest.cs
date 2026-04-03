@@ -1,3 +1,5 @@
+using EquiLink.Shared.AssetClasses;
+
 namespace EquiLink.Shared.Risk;
 
 public interface IOrderRequest
@@ -7,4 +9,5 @@ public interface IOrderRequest
     string Side { get; }
     decimal Quantity { get; }
     decimal? LimitPrice { get; }
+    AssetClass AssetClass { get; }
 }

@@ -8,6 +8,7 @@
     ".NETCoreApp,Version=v8.0": {
       "Domain/1.0.0": {
         "dependencies": {
+          "Shared": "1.0.0",
           "Stateless": "5.20.1"
         },
         "runtime": {
@@ -19,6 +20,14 @@
           "lib/net8.0/Stateless.dll": {
             "assemblyVersion": "4.0.0.0",
             "fileVersion": "5.20.1.0"
+          }
+        }
+      },
+      "Shared/1.0.0": {
+        "runtime": {
+          "Shared.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
           }
         }
       }
@@ -36,6 +45,11 @@
       "sha512": "sha512-jQeuXgIeXEjFAImajavoxvJNcevO+zyK+9ICGzy0LRe/e1tP4vJUnO4Yrg6rP601wYRnulQs59mQH73TbIZzNg==",
       "path": "stateless/5.20.1",
       "hashPath": "stateless.5.20.1.nupkg.sha512"
+    },
+    "Shared/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
     }
   }
 }

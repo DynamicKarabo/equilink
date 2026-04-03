@@ -1,15 +1,17 @@
-using System.Data;
 using Dapper;
+using EquiLink.Infrastructure.DataTier;
 using EquiLink.Infrastructure.ReadModels;
 using Npgsql;
 
 namespace EquiLink.Infrastructure.ReadRepositories;
 
-public class OrderReadRepository(string connectionString) : IOrderReadRepository
+public class OrderReadRepository(IConnectionStringProvider connectionStringProvider) : IOrderReadRepository
 {
     public async Task<OrderSummaryProjection?> GetByIdAsync(
         Guid orderId, Guid fundId, CancellationToken cancellationToken = default)
     {
+        var connectionString = connectionStringProvider.GetReadConnectionString();
+
         await using var connection = new NpgsqlConnection(connectionString);
 
         const string sql = """

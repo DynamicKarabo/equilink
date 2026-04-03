@@ -245,4 +245,228 @@ GET /orders/{id} → GetOrderQuery → GetOrderHandler → OrderReadRepository.G
 ### Key Design Decisions
 - **No synchronous PostgreSQL on hot path**: Risk rules read exclusively from Redis. The write path only touches PostgreSQL for event persistence.
 - **Dapper for reads**: Bypasses EF Core's change tracking overhead for maximum read performance.
-- **JSONB extraction**: The read model queries the event store directly, extracting the latest state from JSONB payloads rather than maintaining a separate read-side projection table. This is simpler for Phase 1 and can be evolved to a materialized view later.
+ - **JSONB extraction**: The read model queries the event store directly, extracting the latest state from JSONB payloads rather than maintaining a separate read-side projection table. This is simpler for Phase 1 and can be evolved to a materialized view later.
+
+---
+
+## Prompt 1 (Phase 2): Multi-Asset Support & Regulatory Amendments
+- ✅ Add `AssetClass` enum (Equity, ETF, Future) to Shared Kernel
+- ✅ Create `AssetClassConfiguration` record (tick size, lot size, margin requirements)
+- ✅ Implement tick rules per asset class (`EquityTickRule`, `ETFTickRule`, `FutureTickRule`)
+- ✅ Implement margin calculators per asset class (`EquityMarginCalculator`, `ETFMarginCalculator`, `FutureMarginCalculator`)
+- ✅ Create `OrderCorrectedEvent` for compensating corrections (append-only)
+- ✅ Add `Correct()` method to `OrderAggregate`
+- ✅ Extend `OrderAggregate.Create()` to accept `AssetClass`
+- ✅ Update `OrderCreatedEvent` to include `AssetClass`
+- ✅ Update `EventStore` serialization/deserialization for new event types
+- ✅ Update `IOrderRequest`, `CreateOrderCommand`, `CreateOrderRequest` to include `AssetClass`
+
+**Summary:**
+
+### Multi-Asset Domain Model
+Extended the `OrderAggregate` to support three asset classes: **Equity**, **ETF**, and **Future**. The `AssetClass` enum lives in the Shared Kernel so both Domain and API layers can reference it without circular dependencies.
+
+### Asset-Specific Rules
+- **Tick Rules** (`ITickRule`): Each asset class has its own implementation validating that order prices conform to the minimum tick size. Equity tick rules handle sub-$1.00 stocks differently (penny stock rules).
+- **Margin Calculators** (`IMarginCalculator`): Each asset class calculates initial and maintenance margin requirements based on notional value × the asset-class-specific margin rate from `AssetClassConfiguration`.
+
+### Regulatory Amendment: `OrderCorrectedEvent`
+Since the event store is **strictly append-only** (enforced by `REVOKE UPDATE, DELETE` at the database level), correcting genuine data errors cannot use direct mutation. Instead, the `OrderCorrectedEvent` acts as a **compensating event** — it records:
+- `OriginalField` — which field was wrong (quantity, limitPrice, symbol, side)
+- `OriginalValue` — the incorrect value
+- `CorrectedValue` — the corrected value
+- `Reason` — audit trail for why the correction was made
+
+The `Correct()` method on `OrderAggregate` fires this event. During replay, `ApplyCorrection()` updates the aggregate's state to reflect the corrected value, maintaining eventual consistency while preserving the full audit trail.
+
+### Flow
+```
+POST /orders → CreateOrderCommand (includes AssetClass)
+    → RiskValidationBehavior (tick rules + margin checks by asset class)
+    → CreateOrderHandler → OrderAggregate.Create(..., assetClass)
+    → OrderCreatedEvent (with AssetClass in payload)
+    → EventStore.AppendAsync
+
+CORRECTION: OrderAggregate.Correct(field, original, corrected, reason)
+    → OrderCorrectedEvent (appended, never mutates)
+    → ApplyCorrection() updates in-memory state on replay
+```
+
+---
+
+## Prompt 2 (Phase 2): Compliance Audit & WORM Archival
+- ✅ Add Azure.Storage.Blobs and CsvHelper packages
+- ✅ Create `AuditRecord` and `IComplianceAuditService` interface
+- ✅ Implement `ComplianceAuditService` (Dapper query against `order_events`)
+- ✅ Create `CsvExportService` with SHA-256 signing
+- ✅ Create `PdfExportService` with SHA-256 signing
+- ✅ Create `WormArchivalService` (monthly partition export to Azure Blob)
+- ✅ Create `GET /audit/orders?from=&to=&format=` endpoint
+- ✅ Wire up compliance services in Program.cs
+
+**Summary:**
+
+### Compliance Audit Export
+The `GET /audit/orders?from=&to=&format=csv|pdf` endpoint queries the `order_events` table directly via Dapper, retrieving all events within the specified time range. Results are exported to either:
+- **CSV** — via CsvHelper, with all event fields including JSONB payloads
+- **PDF** — a basic PDF document with the audit report
+
+Both exports include a **SHA-256 signature** (`ComputeSignature()`) that can be used to verify the integrity of the exported file against tampering.
+
+### WORM Archival (Azure Blob Storage)
+The `WormArchivalService` handles monthly partition archival for 7-year regulatory retention:
+
+1. **Query**: Selects all events from `order_events` within the target month (`occurred_at >= monthStart AND occurred_at < monthEnd`)
+2. **Export**: Serializes to CSV format
+3. **Upload**: Writes to Azure Blob Storage at `equilink-audit-archive/monthly/{yyyy-MM}/order_events_{yyyy-MM}.csv`
+4. **WORM Policy**: The blob is written once — if it already exists, the service skips it (no overwrite). To enforce true WORM at the storage level, the Azure Blob container should be configured with an **immutable blob policy** (legal hold or time-based retention) via Azure portal or ARM template.
+
+### 7-Year Retention
+The archival job should be scheduled monthly (e.g., via Azure Functions Timer Trigger or cron). Combined with Azure Blob immutable storage policies, this satisfies the regulatory requirement that audit data cannot be modified or deleted for 7 years.
+
+### Flow
+```
+GET /audit/orders?from=2024-01-01&to=2024-12-31&format=csv
+    → ComplianceAuditService.GetAuditRecordsAsync()
+    → Dapper: SELECT FROM order_events WHERE occurred_at BETWEEN @from AND @to
+    → CsvExportService.ExportAsync() → SHA-256 hash
+    → FileResult (text/csv or application/pdf)
+
+Monthly Archival Job (scheduled)
+    → WormArchivalService.ArchiveMonthlyPartitionsAsync(month)
+    → Dapper: SELECT FROM order_events WHERE occurred_at IN month
+    → Azure Blob: monthly/{yyyy-MM}/order_events_{yyyy-MM}.csv
+    → WORM: skip if exists (no overwrite)
+```
+
+---
+
+## Prompt 3 (Phase 2): Multi-Region Scaling & Read Replicas
+- ✅ Add `PostgresReadOnly` connection string to appsettings
+- ✅ Create `IConnectionStringProvider` interface
+- ✅ Implement `ConnectionStringProvider` with primary/replica routing and fallback
+- ✅ Update `OrderReadRepository` to use replica connection string
+- ✅ Update `ComplianceAuditService` to use replica connection string
+- ✅ Update `WormArchivalService` to use replica connection string
+- ✅ Ensure EF Core `EquiLinkDbContext` uses primary only (writes)
+- ✅ Wire up in Program.cs
+
+**Summary:**
+
+### Read Replica Routing Architecture
+All database connections now flow through `IConnectionStringProvider`, which centralizes the routing decision:
+
+```
+WRITE operations → GetWriteConnectionString() → Primary PostgreSQL
+  - EF Core (EquiLinkDbContext)
+  - EventStore.AppendAsync()
+
+READ operations  → GetReadConnectionString() → Read Replica PostgreSQL
+  - OrderReadRepository (Dapper)
+  - ComplianceAuditService (Dapper)
+  - WormArchivalService (Dapper)
+```
+
+### Fallback Behavior
+If `PostgresReadOnly` is not configured (e.g., in development), the provider logs a warning and falls back to the primary connection string for reads. This means the same code works in both single-instance and multi-region deployments without any code changes.
+
+### Configuration
+```json
+{
+  "ConnectionStrings": {
+    "Postgres": "Host=primary.region.db;Port=5432;Database=equilink;...",
+    "PostgresReadOnly": "Host=replica.region.db;Port=5432;Database=equilink;..."
+  }
+}
+```
+
+### Write Guarantees
+EF Core's `EquiLinkDbContext` is explicitly configured with the primary connection string only. It never has access to the replica, making it impossible for write operations to accidentally hit a read-only instance.
+
+---
+
+## Prompt 4 (Phase 2): Fund Onboarding API
+- ✅ Create `Fund` aggregate with lifecycle (Pending → Active → Suspended → Closed)
+- ✅ Create `FundRiskLimits` entity (MaxOrderSize, DailyLossLimit, ConcentrationLimit)
+- ✅ Create `FundRiskLimitTemplate` for reusable risk configurations
+- ✅ Create EF Core configurations for `funds`, `fund_risk_limits`, `fund_risk_limit_templates`
+- ✅ Update `EquiLinkDbContext` with Fund DbSets and configurations
+- ✅ Create `CreateFundCommand` + handler with template resolution
+- ✅ Create `POST /funds` endpoint
+- ✅ Wire up in Program.cs (via MediatR auto-registration)
+
+**Summary:**
+
+### Fund Onboarding Flow
+The `POST /funds` endpoint allows administrators to onboard a new fund with risk limit templating:
+
+1. **Template Resolution**: The handler first checks if a `FundRiskLimitTemplate` with the given name already exists. If it does, it reuses the existing template. If not, it creates a new one.
+2. **Fund Creation**: `Fund.Create()` initializes the fund with `Status = Pending`, applies the risk limit template to create `FundRiskLimits`, and sets the creation timestamp.
+3. **Persistence**: Both the fund and its risk limits are saved in a single transaction via EF Core.
+
+### Risk Limit Templating
+Templates allow administrators to define reusable risk configurations:
+- `MaxOrderSize` — maximum quantity per single order
+- `DailyLossLimit` — maximum allowed daily loss before trading is halted
+- `ConcentrationLimit` — maximum percentage of portfolio in a single position
+
+When onboarding a fund, the admin specifies a template name. If the template exists, it's reused (ensuring consistency across funds). If not, a new template is created with the provided values.
+
+### Fund Lifecycle
+- **Pending** → initial state after creation, fund cannot trade
+- **Active** → fund can execute orders (activated via `Activate()`)
+- **Suspended** → trading halted temporarily (via `Suspend()`)
+- **Closed** → fund permanently closed (terminal state)
+
+### Database Schema
+```
+funds
+├── id (UUID, PK)
+├── name (VARCHAR(256), unique)
+├── manager_name (VARCHAR(256))
+├── status (VARCHAR)
+└── created_at (TIMESTAMPTZ)
+
+fund_risk_limits
+├── fund_id (UUID, PK, FK → funds)
+├── max_order_size (DECIMAL(18,8))
+├── daily_loss_limit (DECIMAL(18,8))
+└── concentration_limit (DECIMAL(18,8))
+
+fund_risk_limit_templates
+├── id (UUID, PK)
+├── template_name (VARCHAR(256), unique)
+├── max_order_size (DECIMAL(18,8))
+├── daily_loss_limit (DECIMAL(18,8))
+└── concentration_limit (DECIMAL(18,8))
+```
+
+### API
+```
+POST /api/funds
+{
+  "name": "Alpha Fund",
+  "managerName": "John Doe",
+  "riskLimitTemplateName": "Conservative",
+  "maxOrderSize": 10000,
+  "dailyLossLimit": 50000,
+  "concentrationLimit": 0.25
+}
+
+→ 201 Created
+{
+  "fundId": "...",
+  "name": "Alpha Fund",
+  "status": "Pending"
+}
+```
+
+---
+
+## Prompt 5 (Phase 2): Addressing Unresolved Tradeoffs
+- ⬜ Implement aggregate snapshot strategy (event count vs time-based)
+- ⬜ Evaluate sync vs async projections (in-process vs Azure Service Bus)
+- ⬜ Outline multi-region active-passive vs active-active failover plan
+- ⬜ Address distributed locking on Redis risk state
+
+**Summary:** _Pending_

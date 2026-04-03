@@ -64,11 +64,15 @@ public class EventStore(EquiLinkDbContext dbContext, ICurrentFundContext current
         {
             OrderCreatedEvent e => JsonSerializer.Serialize(new
             {
-                e.FundId, e.Symbol, e.Side, e.Quantity, e.LimitPrice
+                e.FundId, e.Symbol, e.Side, e.Quantity, e.LimitPrice, e.AssetClass
             }, JsonOptions),
             OrderRejectedEvent e => JsonSerializer.Serialize(new
             {
                 e.Reason
+            }, JsonOptions),
+            OrderCorrectedEvent e => JsonSerializer.Serialize(new
+            {
+                e.OriginalField, e.OriginalValue, e.CorrectedValue, e.Reason
             }, JsonOptions),
             _ => JsonSerializer.Serialize(new { }, JsonOptions)
         };
@@ -92,7 +96,8 @@ public class EventStore(EquiLinkDbContext dbContext, ICurrentFundContext current
                 Quantity: payload.RootElement.GetProperty("quantity").GetDecimal(),
                 LimitPrice: payload.RootElement.TryGetProperty("limitPrice", out var lp) && lp.ValueKind != JsonValueKind.Null
                     ? lp.GetDecimal()
-                    : null),
+                    : null,
+                AssetClass: payload.RootElement.GetProperty("assetClass").GetString()!),
 
             nameof(OrderRiskValidationStartedEvent) => new OrderRiskValidationStartedEvent(
                 EventId: entity.Id,
@@ -122,6 +127,17 @@ public class EventStore(EquiLinkDbContext dbContext, ICurrentFundContext current
                 OccurredAt: entity.OccurredAt,
                 EventType: entity.EventType,
                 Version: entity.Version),
+
+            nameof(OrderCorrectedEvent) => new OrderCorrectedEvent(
+                EventId: entity.Id,
+                AggregateId: entity.AggregateId,
+                OccurredAt: entity.OccurredAt,
+                EventType: entity.EventType,
+                Version: entity.Version,
+                OriginalField: payload.RootElement.GetProperty("originalField").GetString()!,
+                OriginalValue: payload.RootElement.GetProperty("originalValue").GetString()!,
+                CorrectedValue: payload.RootElement.GetProperty("correctedValue").GetString()!,
+                Reason: payload.RootElement.GetProperty("reason").GetString()!),
 
             _ => throw new InvalidOperationException($"Unknown event type: {entity.EventType}")
         };

@@ -25,7 +25,11 @@
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
-            "projectReferences": {}
+            "projectReferences": {
+              "/home/karabooliphant/Projects/equilink/src/Shared/Shared.csproj": {
+                "projectPath": "/home/karabooliphant/Projects/equilink/src/Shared/Shared.csproj"
+              }
+            }
           }
         },
         "warningProperties": {
@@ -116,6 +120,14 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "Azure.Storage.Blobs": {
+              "target": "Package",
+              "version": "[12.27.0, )"
+            },
+            "CsvHelper": {
+              "target": "Package",
+              "version": "[33.1.0, )"
+            },
             "Dapper": {
               "target": "Package",
               "version": "[2.1.72, )"

@@ -22,6 +22,7 @@ public class OrdersController(ISender sender, ICurrentFundContext fundContext) :
             Side: request.Side,
             Quantity: request.Quantity,
             LimitPrice: request.LimitPrice,
+            AssetClass: request.AssetClass,
             IdempotencyKey: idempotencyKey
         );
 

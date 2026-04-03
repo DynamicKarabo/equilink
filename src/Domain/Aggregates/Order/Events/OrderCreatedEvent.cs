@@ -12,5 +12,6 @@ public record OrderCreatedEvent(
     string Symbol,
     string Side,
     decimal Quantity,
-    decimal? LimitPrice
+    decimal? LimitPrice,
+    string AssetClass
 ) : DomainEvent(EventId, AggregateId, OccurredAt, EventType, Version);
