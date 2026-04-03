@@ -47,33 +47,33 @@ graph TB
     end
 
     subgraph "API Layer (ASP.NET Core 8)"
-        Controllers[Controllers<br/>Orders, Funds, Audit]
-        MinimalAPIs[Minimal APIs<br/>Health Checks]
+        Controllers[Controllers Orders, Funds, Audit]
+        MinimalAPIs[Minimal APIs Health Checks]
         Middleware[Global Exception Handler]
     end
 
     subgraph "MediatR Pipeline"
-        Idempotency[Idempotency Behavior<br/>Redis SET NX]
-        RiskValidation[Risk Validation Behavior<br/>Chain of Responsibility]
+        Idempotency[Idempotency Behavior Redis SET NX]
+        RiskValidation[Risk Validation Behavior Chain of Responsibility]
     end
 
     subgraph "CQRS - Write Path"
-        Commands[Commands<br/>CreateOrder, CreateFund]
+        Commands[Commands CreateOrder, CreateFund]
         Handlers[Command Handlers]
-        Domain[Domain Model<br/>OrderAggregate + FSM]
-        EventStore[Event Store<br/>EF Core + PostgreSQL]
+        Domain[Domain Model OrderAggregate + FSM]
+        EventStore[Event Store EF Core + PostgreSQL]
     end
 
     subgraph "CQRS - Read Path"
-        Queries[Queries<br/>GetOrder, GetAudit]
+        Queries[Queries GetOrder, GetAudit]
         ReadHandlers[Query Handlers]
-        Dapper[Dapper Read Repository<br/>Direct SQL + JSONB]
+        Dapper[Dapper Read Repository Direct SQL + JSONB]
     end
 
     subgraph "Infrastructure"
-        PostgreSQL[(PostgreSQL 16<br/>Primary + Read Replica)]
-        Redis[(Redis 7<br/>Idempotency + Risk Cache)]
-        AzureBlob[(Azure Blob Storage<br/>WORM Archival)]
+        PostgreSQL[(PostgreSQL 16 Primary + Read Replica)]
+        Redis[(Redis 7 Idempotency + Risk Cache)]
+        AzureBlob[(Azure Blob Storage WORM Archival)]
     end
 
     API_Client --> Controllers
@@ -166,7 +166,7 @@ sequenceDiagram
     Client->>Controller: GET /orders/{id}
     Controller->>QueryHandler: GetOrderQuery
     QueryHandler->>ReadRepo: GetByIdAsync(orderId, fundId)
-    ReadRepo->>PostgreSQL: SELECT FROM order_events<br/>WHERE aggregate_id = ? AND fund_id = ?<br/>ORDER BY version DESC LIMIT 1
+    ReadRepo->>PostgreSQL: SELECT FROM order_events WHERE aggregate_id = ? AND fund_id = ? ORDER BY version DESC LIMIT 1
     PostgreSQL-->>ReadRepo: Latest event + JSONB payload
     ReadRepo-->>QueryHandler: OrderSummaryProjection
     QueryHandler-->>Controller: Order data
@@ -492,7 +492,7 @@ Only `INSERT` (append) and `SELECT` (read) are permitted. Modifying this require
 ```mermaid
 graph LR
     subgraph "Request Flow"
-        JWT[JWT Token<br/>fund_id claim] --> Context[CurrentFundContext]
+        JWT[JWT Token fund_id claim] --> Context[CurrentFundContext]
         Context --> Filter[EF Core Global Query Filter]
         Filter --> Query[WHERE fund_id = @fundId]
     end
@@ -518,7 +518,7 @@ graph TD
     A[Request with X-Idempotency-Key] --> B{Key in Redis?}
     B -->|Yes| C[Return cached response]
     B -->|No| D[Execute handler]
-    D --> E[Cache response in Redis<br/>SET NX, 24h TTL]
+    D --> E[Cache response in Redis SET NX, 24h TTL]
     E --> F[Return response]
 
     style B fill:#fff9c4
@@ -539,16 +539,16 @@ graph TD
 ```mermaid
 graph LR
     A[Order Request] --> B[Idempotency Check]
-    B --> C[Risk Rule 1<br/>SymbolBlacklist]
+    B --> C[Risk Rule 1 SymbolBlacklist]
     C --> D{Pass?}
     D -->|No| E[400 RiskRuleViolation]
-    D -->|Yes| F[Risk Rule 2<br/>MaxOrderSize]
+    D -->|Yes| F[Risk Rule 2 MaxOrderSize]
     F --> G{Pass?}
     G -->|No| E
     G -->|Yes| H[Execute Handler]
 
-    C -.-> Redis1[(Redis<br/>risk:{fundId}:blacklist)]
-    F -.-> Redis2[(Redis<br/>risk:{fundId}:max_order_size)]
+    C -.-> Redis1[(Redis risk:{fundId}:blacklist)]
+    F -.-> Redis2[(Redis risk:{fundId}:max_order_size)]
 
     style C fill:#e8f5e9
     style F fill:#e8f5e9
@@ -580,7 +580,7 @@ graph LR
 
 ```mermaid
 graph LR
-    A[GET /audit/orders] --> B[Query order_events<br/>WHERE occurred_at BETWEEN]
+    A[GET /audit/orders] --> B[Query order_events WHERE occurred_at BETWEEN]
     B --> C{Format?}
     C -->|csv| D[CsvHelper Export]
     C -->|pdf| E[PDF Export]
@@ -597,12 +597,12 @@ graph LR
 
 ```mermaid
 graph TD
-    A[Monthly Cron Job] --> B[Query order_events<br/>WHERE occurred_at IN month]
+    A[Monthly Cron Job] --> B[Query order_events WHERE occurred_at IN month]
     B --> C[Serialize to CSV]
     C --> D{Blob exists?}
     D -->|Yes| E[Skip - WORM policy]
-    D -->|No| F[Upload to Azure Blob<br/>monthly/yyyy-MM/order_events_yyyy-MM.csv]
-    F --> G[7-year retention<br/>immutable blob policy]
+    D -->|No| F[Upload to Azure Blob monthly/yyyy-MM/order_events_yyyy-MM.csv]
+    F --> G[7-year retention immutable blob policy]
 
     style D fill:#fff9c4
     style E fill:#c8e6c9
