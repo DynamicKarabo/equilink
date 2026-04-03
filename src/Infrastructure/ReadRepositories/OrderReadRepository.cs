@@ -18,14 +18,10 @@ public class OrderReadRepository(IConnectionStringProvider connectionStringProvi
             SELECT
                 e.aggregate_id AS OrderId,
                 e.fund_id AS FundId,
-                e.payload->>'symbol' AS Symbol,
-                e.payload->>'side' AS Side,
-                (e.payload->>'quantity')::DECIMAL AS Quantity,
-                CASE
-                    WHEN e.payload ? 'limitPrice' AND e.payload->>'limitPrice' IS NOT NULL
-                    THEN (e.payload->>'limitPrice')::DECIMAL
-                    ELSE NULL
-                END AS LimitPrice,
+                e.payload->>'Symbol' AS Symbol,
+                e.payload->>'Side' AS Side,
+                (e.payload->>'Quantity')::DECIMAL AS Quantity,
+                (e.payload->>'LimitPrice')::DECIMAL AS LimitPrice,
                 e.event_type AS Status,
                 e.occurred_at AS CreatedAt,
                 e.created_at AS UpdatedAt

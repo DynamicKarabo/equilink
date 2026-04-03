@@ -12,6 +12,14 @@ public class CreateFundHandler(EquiLinkDbContext dbContext)
         CreateFundCommand request,
         CancellationToken cancellationToken)
     {
+        var existingFund = await dbContext.Funds
+            .FirstOrDefaultAsync(f => f.Name == request.Name, cancellationToken);
+
+        if (existingFund != null)
+        {
+            throw new DuplicateFundException(request.Name);
+        }
+
         var existingTemplate = await dbContext.FundRiskLimitTemplates
             .FirstOrDefaultAsync(t => t.TemplateName == request.RiskLimitTemplateName, cancellationToken);
 
@@ -45,3 +53,6 @@ public class CreateFundHandler(EquiLinkDbContext dbContext)
         return new CreateFundResult(fund.Id, fund.Name, fund.Status);
     }
 }
+
+public class DuplicateFundException(string fundName)
+    : InvalidOperationException($"A fund with the name '{fundName}' already exists.");

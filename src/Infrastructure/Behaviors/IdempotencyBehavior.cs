@@ -15,6 +15,8 @@ public class IdempotencyBehavior<TRequest, TResponse>(
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerOptions.Default);
+
     private const string IdempotencyKeyHeader = "X-Idempotency-Key";
     private const string IdempotencyKeyProperty = "IdempotencyKey";
 
@@ -48,24 +50,17 @@ public class IdempotencyBehavior<TRequest, TResponse>(
         {
             logger.LogDebug("Idempotent retry detected for key {RedisKey}", redisKey);
 
-            var cached = JsonSerializer.Deserialize<CachedResponse>(cachedValue!);
+            var cachedResponse = JsonSerializer.Deserialize<TResponse>(cachedValue!, JsonOptions);
 
-            if (cached != null)
+            if (cachedResponse != null)
             {
-                return (TResponse)cached.Response!;
+                return cachedResponse;
             }
         }
 
         var response = await next();
 
-        var cacheEntry = new CachedResponse(
-            Response: response,
-            OriginalOrderId: ExtractOrderId(response),
-            StatusCode: 200,
-            Timestamp: DateTimeOffset.UtcNow
-        );
-
-        var serialized = JsonSerializer.Serialize(cacheEntry);
+        var serialized = JsonSerializer.Serialize(response, JsonOptions);
 
         await db.StringSetAsync(
             redisKey,
@@ -114,12 +109,4 @@ public class IdempotencyBehavior<TRequest, TResponse>(
 
         return "unknown";
     }
-
-    private string? ExtractOrderId(TResponse response)
-    {
-        var prop = typeof(TResponse).GetProperty("OrderId");
-        return prop?.GetValue(response)?.ToString();
-    }
-
-    private record CachedResponse(object? Response, string? OriginalOrderId, int StatusCode, DateTimeOffset Timestamp);
 }

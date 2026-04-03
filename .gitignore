@@ -1,0 +1,34 @@
+## .NET
+[Bb]in/
+[Oo]bj/
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.runtimeconfig.dev.json
+*.xml
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Docker
+.dockerignore
+
+## Build output
+src/*/bin/
+src/*/obj/
+src/*/Release/
+src/*/Debug/
