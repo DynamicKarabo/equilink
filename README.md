@@ -498,7 +498,7 @@ graph LR
     end
 
     subgraph "Override"
-        Bypass[IgnoreTenantFilter&lt;T&gt;()] -.-> Query
+        Bypass[IgnoreTenantFilter] -.-> Query
     end
 
     style Filter fill:#e1f5fe
