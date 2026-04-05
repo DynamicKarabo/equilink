@@ -18,7 +18,6 @@ public class IdempotencyBehavior<TRequest, TResponse>(
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerOptions.Default);
 
     private const string IdempotencyKeyHeader = "X-Idempotency-Key";
-    private const string IdempotencyKeyProperty = "IdempotencyKey";
 
     public async Task<TResponse> Handle(
         TRequest request,
@@ -32,7 +31,7 @@ public class IdempotencyBehavior<TRequest, TResponse>(
             return await next();
         }
 
-        var idempotencyKey = ExtractIdempotencyKey(request);
+        var idempotencyKey = ExtractIdempotencyKey(request, attribute.IdempotencyKeyPropertyName);
 
         if (string.IsNullOrEmpty(idempotencyKey))
         {
@@ -74,7 +73,7 @@ public class IdempotencyBehavior<TRequest, TResponse>(
         return response;
     }
 
-    private string ExtractIdempotencyKey(TRequest request)
+    private string ExtractIdempotencyKey(TRequest request, string propertyName)
     {
         var httpContext = httpContextAccessor.HttpContext;
 
@@ -87,7 +86,7 @@ public class IdempotencyBehavior<TRequest, TResponse>(
             }
         }
 
-        var prop = typeof(TRequest).GetProperty(IdempotencyKeyProperty);
+        var prop = typeof(TRequest).GetProperty(propertyName);
 
         if (prop != null)
         {

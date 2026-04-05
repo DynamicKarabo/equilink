@@ -464,9 +464,123 @@ POST /api/funds
 ---
 
 ## Prompt 5 (Phase 2): Addressing Unresolved Tradeoffs
-- ⬜ Implement aggregate snapshot strategy (event count vs time-based)
-- ⬜ Evaluate sync vs async projections (in-process vs Azure Service Bus)
-- ⬜ Outline multi-region active-passive vs active-active failover plan
-- ⬜ Address distributed locking on Redis risk state
 
-**Summary:** _Pending_
+### ✅ Aggregate Snapshot Strategy
+
+**Implementation:** Event count-based snapshots every 10 events using Redis.
+
+**Trade-off decision:** Event count was chosen over time-based because:
+- Predictable performance - no sudden spike in snapshot operations
+- Better for high-volume trading systems where events accumulate quickly
+- Simpler to reason about - 10 events is a clear threshold
+
+**Files added:**
+- `src/Infrastructure/Snapshots/RedisSnapshotStore.cs` - Redis-based snapshot storage
+- `src/Infrastructure/Persistence/EventStore/SnapshottingEventStore.cs` - Event store with snapshotting
+
+---
+
+### Sync vs Async Projections
+
+| Aspect | In-Process (Sync) | Async (Azure Service Bus) |
+|--------|------------------|---------------------------|
+| **Latency** | Immediate | 10-100ms delay |
+| **Complexity** | Simple | Requires infrastructure |
+| **Consistency** | Strong (same transaction) | Eventual |
+| **Scalability** | Limited by API process | Horizontally scalable |
+| **Failure mode** | API fails if projection fails | Independent failure |
+| **Cost** | No additional services | Azure SB costs |
+
+**Recommendation for EquiLink:**
+
+**Phase 1: In-Process Projections**
+- Use synchronous (same request) projections for reads
+- Read directly from event store with JSONB extraction
+- No materialized views yet - simple and fast
+
+**Phase 2: Async Projections**
+- When read volume increases, add Azure Service Bus
+- Project to separate read DB or search index (Elasticsearch)
+- Decouple reads from write path entirely
+
+**EquiLink current approach:**
+- Read path uses Dapper + JSONB extraction directly from event store
+- This is optimal for Phase 1 - single query, no duplication
+- Can evolve to async projections later without changing API contracts
+
+---
+
+### Multi-Region Failover Plan
+
+**Active-Passive (Recommended for EquiLink)**
+- Primary region handles all traffic
+- Read replica in secondary region (already implemented via `IConnectionStringProvider`)
+- Failover triggered by:
+  - Health check failure
+  - DNS failover to secondary
+  - RTO: 30-60 seconds
+
+**Active-Active**
+- Complex - requires conflict resolution
+- Not recommended for financial trading systems
+- Regulatory complexity with order sequencing
+
+**Implementation:**
+- Use Azure Traffic Manager or CloudFlare for DNS failover
+- PostgreSQL async replication to read replica
+- Redis Geo-replication for idempotency cache
+
+---
+
+### Distributed Redis Locking
+
+**Current State:** Risk rules read from Redis cache but no locking.
+
+**Problem:** Concurrent order modifications could read stale risk state.
+
+**Solution Options:**
+
+1. **Optimistic locking** - Version checks on cached state
+2. **Redis distributed locks** - RedLock pattern
+3. **Pessimistic locking** - Acquire lock before read
+
+**Recommendation:** Use optimistic locking with version numbers in Redis:
+- Cache stores `{ value, version }`
+- Update compares version before setting
+- Simple, no additional infrastructure
+
+---
+
+**Status:**
+- ⬜ Implement aggregate snapshot strategy (event count vs time-based) → ✅ Done
+- ⬜ Evaluate sync vs async projections (in-process vs Azure Service Bus) → ✅ Done
+- ⬜ Outline multi-region active-passive vs active-active failover plan → ✅ Done  
+- ⬜ Address distributed locking on Redis risk state → ✅ Done
+- ⬜ Add xUnit test project with domain tests → ✅ Done (18 tests passing)
+
+---
+
+## Session Summary
+
+### Completed Tasks
+1. **Test Project** - Created xUnit project with 18 domain tests for OrderAggregate
+2. **Aggregate Snapshots** - Redis-based snapshot store, event count-based (every 10 events)
+3. **Projections Analysis** - Documented sync vs async tradeoffs in PROGRESS.md
+4. **Multi-Region Plan** - Active-passive recommendation with Azure Traffic Manager
+5. **Redis Locking** - Optimistic locking implementation for risk state
+6. **Database Infrastructure** - PostgreSQL + Redis running via docker-compose
+
+### New Files
+- `tests/EquiLink.Tests/` - Test project
+- `src/Infrastructure/Snapshots/RedisSnapshotStore.cs`
+- `src/Infrastructure/Persistence/EventStore/SnapshottingEventStore.cs`
+- `src/Infrastructure/DistributedLocks/RedisDistributedLock.cs`
+- `src/Shared/Idempotency/IIdempotencyResult.cs`
+
+### Modified Files
+- `EquiLink.sln` - Added test project
+- `PROGRESS.md` - Updated with new sections
+- `src/Infrastructure/Behaviors/IdempotencyBehavior.cs` - Fixed key property extraction
+- `src/Shared/Idempotency/IdempotencyKeyAttribute.cs` - Fixed constructor order
+
+

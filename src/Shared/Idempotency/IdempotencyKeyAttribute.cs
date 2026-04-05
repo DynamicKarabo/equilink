@@ -3,12 +3,14 @@ namespace EquiLink.Shared.Idempotency;
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class IdempotencyKeyAttribute : Attribute
 {
-    public int TtlHours { get; }
     public string FundIdPropertyName { get; }
+    public string IdempotencyKeyPropertyName { get; }
+    public int TtlHours { get; }
 
-    public IdempotencyKeyAttribute(int ttlHours = 24, string fundIdPropertyName = "FundId")
+    public IdempotencyKeyAttribute(string fundIdPropertyName = "FundId", string idempotencyKeyPropertyName = "IdempotencyKey", int ttlHours = 24)
     {
-        TtlHours = ttlHours;
         FundIdPropertyName = fundIdPropertyName;
+        IdempotencyKeyPropertyName = idempotencyKeyPropertyName;
+        TtlHours = ttlHours;
     }
 }
