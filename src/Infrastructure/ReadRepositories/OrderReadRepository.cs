@@ -7,11 +7,9 @@ namespace EquiLink.Infrastructure.ReadRepositories;
 
 public class OrderReadRepository(IConnectionStringProvider connectionStringProvider) : IOrderReadRepository
 {
-    public async Task<OrderSummaryProjection?> GetByIdAsync(
-        Guid orderId, Guid fundId, CancellationToken cancellationToken = default)
+    public async Task<OrderSummaryProjection?> GetByIdAsync(Guid orderId, Guid fundId, CancellationToken cancellationToken = default)
     {
         var connectionString = connectionStringProvider.GetReadConnectionString();
-
         await using var connection = new NpgsqlConnection(connectionString);
 
         const string sql = """
@@ -22,7 +20,14 @@ public class OrderReadRepository(IConnectionStringProvider connectionStringProvi
                 e.payload->>'Side' AS Side,
                 (e.payload->>'Quantity')::DECIMAL AS Quantity,
                 (e.payload->>'LimitPrice')::DECIMAL AS LimitPrice,
-                e.event_type AS Status,
+                CASE e.event_type
+                    WHEN 'OrderCreatedEvent' THEN 'New'
+                    WHEN 'OrderRiskValidationStartedEvent' THEN 'RiskValidating'
+                    WHEN 'OrderApprovedEvent' THEN 'Approved'
+                    WHEN 'OrderRejectedEvent' THEN 'Rejected'
+                    WHEN 'OrderSubmittedEvent' THEN 'Submitted'
+                    ELSE 'Unknown'
+                END AS Status,
                 e.occurred_at AS CreatedAt,
                 e.created_at AS UpdatedAt
             FROM order_events e

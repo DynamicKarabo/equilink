@@ -13,10 +13,13 @@ using EquiLink.Infrastructure.Persistence.EventStore;
 using EquiLink.Infrastructure.ReadRepositories;
 using EquiLink.Infrastructure.RiskEngine;
 using EquiLink.Infrastructure.Tenancy;
+using EquiLink.Infrastructure.Snapshots;
 using EquiLink.Shared.Risk;
+using EquiLink.Api.Hubs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +29,17 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("order", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 10;
+    });
+});
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -42,7 +56,8 @@ builder.Services.AddSingleton<IConnectionStringProvider, ConnectionStringProvide
 builder.Services.AddDbContext<EquiLinkDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));
 
-builder.Services.AddScoped<IEventStore, EventStore>();
+builder.Services.AddScoped<IEventStore, SnapshottingEventStore>();
+builder.Services.AddScoped<ISnapshotStore, RedisSnapshotStore>();
 
 builder.Services.AddScoped<IOrderReadRepository, OrderReadRepository>();
 
@@ -79,8 +94,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRateLimiter();
+
 app.MapHealthChecksEndpoints();
 
 app.MapControllers();
+app.MapHub<MarketDataHub>("/marketDataHub");
 
 app.Run();

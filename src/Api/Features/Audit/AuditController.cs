@@ -18,7 +18,9 @@ public class AuditController(IComplianceAuditService auditService) : ControllerB
 
         if (records.Count == 0)
         {
-            return NoContent();
+            var emptyCsv = "Timestamp,EventType,AggregateId,Details\n";
+            var emptyBytes = System.Text.Encoding.UTF8.GetBytes(emptyCsv);
+            return File(emptyBytes, "text/csv", $"equilink-audit-{from:yyyyMMdd}-{to:yyyyMMdd}.csv");
         }
 
         byte[] fileBytes;

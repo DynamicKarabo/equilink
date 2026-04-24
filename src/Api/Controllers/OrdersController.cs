@@ -5,12 +5,14 @@ using EquiLink.Infrastructure.ReadModels;
 using EquiLink.Infrastructure.Tenancy;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EquiLink.Api.Controllers;
 
 public class OrdersController(ISender sender, ICurrentFundContext fundContext) : BaseApiController
 {
     [HttpPost]
+    [EnableRateLimiting("order")]
     public async Task<IActionResult> CreateOrder(
         [FromBody] CreateOrderRequest request,
         [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey,

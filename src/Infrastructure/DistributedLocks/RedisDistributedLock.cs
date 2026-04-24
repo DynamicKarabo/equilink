@@ -63,7 +63,7 @@ public class OptimisticRiskStateCache : IRiskStateCache
         if (!value.HasValue)
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             
-        return JsonSerializer.Deserialize<HashSet<string>>(value, _jsonOptions) 
+        return JsonSerializer.Deserialize<HashSet<string>>(value!, _jsonOptions)
             ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 

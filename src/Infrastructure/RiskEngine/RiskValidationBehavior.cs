@@ -15,6 +15,11 @@ public class RiskValidationBehavior<TRequest, TResponse>(
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
+        if (request is not IOrderRequest)
+        {
+            return await next();
+        }
+
         var orderedRules = riskRules.OrderBy(r => r.Order).ToList();
 
         foreach (var rule in orderedRules)
